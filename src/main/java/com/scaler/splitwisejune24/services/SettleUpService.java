@@ -1,12 +1,12 @@
 package com.scaler.splitwisejune24.services;
 
 import com.scaler.splitwisejune24.dtos.SettleUpGroupRequestDto;
-import com.scaler.splitwisejune24.models.Expense;
-import com.scaler.splitwisejune24.models.ExpenseType;
-import com.scaler.splitwisejune24.models.ExpenseUser;
-import com.scaler.splitwisejune24.models.User;
+import com.scaler.splitwisejune24.models.*;
+import com.scaler.splitwisejune24.repositories.ExpenseRepository;
 import com.scaler.splitwisejune24.repositories.ExpenseUserRepository;
+import com.scaler.splitwisejune24.repositories.GroupRepository;
 import com.scaler.splitwisejune24.repositories.UserRepository;
+import com.scaler.splitwisejune24.strategy.SettleUpStrategy;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -15,11 +15,20 @@ import java.util.*;
 public class SettleUpService {
     private UserRepository userRepository;
     private ExpenseUserRepository expenseUserRepository;
+    private SettleUpStrategy settleUpStrategy;
+    private GroupRepository groupRepository;
+    private ExpenseRepository expenseRepository;
 
     public SettleUpService(UserRepository userRepository,
-                           ExpenseUserRepository expenseUserRepository) {
+                           ExpenseUserRepository expenseUserRepository,
+                           SettleUpStrategy settleUpStrategy,
+                           GroupRepository groupRepository,
+                           ExpenseRepository expenseRepository) {
         this.userRepository = userRepository;
         this.expenseUserRepository = expenseUserRepository;
+        this.settleUpStrategy = settleUpStrategy;
+        this.groupRepository = groupRepository;
+        this.expenseRepository = expenseRepository;
     }
 
     public List<Expense> settleUpUser(Long userId) {
@@ -47,14 +56,44 @@ public class SettleUpService {
             expenses.add(expenseUser.getExpense());
         }
 
+        //Settle Up the expenses.
+        List<Expense> settleUpExpenses = settleUpStrategy.settleUp(expenses.stream().toList());
+        /*
+        A -> B : 200
+        A -> C : 700
+        D -> C : 500
+         */
 
+        List<Expense> expensesToReturn = new ArrayList<>();
+
+        for (Expense expense : settleUpExpenses) {
+            for (ExpenseUser expenseUser : expense.getExpenseUsers()) {
+                if (expenseUser.getUser().equals(user)) {
+                    expensesToReturn.add(expense);
+                    break;
+                }
+            }
+        }
+
+        return expensesToReturn;
     }
 
     public List<Expense> settleUpGroup(Long groupId) {
-        return null;
+
+        Optional<Group> optionalGroup = groupRepository.findById(groupId);
+
+        if (optionalGroup.isEmpty()) {
+            throw new RuntimeException("Invalid group id : " + groupId);
+        }
+
+        //Find all the expenses for this group.
+        //select * from expenses where group_id = 123.
+        List<Expense> expenses = expenseRepository.findAllByGroup(optionalGroup.get());
+
+        //Settle Up Algorithm
+        return settleUpStrategy.settleUp(expenses);
     }
 }
-
 
 
 /*

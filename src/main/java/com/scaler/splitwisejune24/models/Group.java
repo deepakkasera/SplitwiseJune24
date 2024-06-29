@@ -22,6 +22,6 @@ public class Group extends BaseModel {
     @ManyToOne
     private User createdBy; //Admin
 
-    @OneToMany
+    @OneToMany(mappedBy = "group")
     private List<Expense> expenses;
 }

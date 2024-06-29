@@ -21,6 +21,9 @@ public class Expense extends BaseModel {
 
     @OneToMany(mappedBy = "expense")
     private List<ExpenseUser> expenseUsers;
+
+    @ManyToOne
+    private Group group;
 }
 
 
@@ -37,4 +40,9 @@ E1U2
 E1U3
 
 XY - X => M:1
+
+
+   1           1
+Expense ---- Group => M:1
+   M           1
  */
